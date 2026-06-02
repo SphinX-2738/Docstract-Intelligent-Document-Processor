@@ -1,0 +1,24 @@
+Subject: Follow-up from Today's Team Discussion
+
+Hi Team,
+
+Thanks everyone for joining today's meeting.
+
+Here is a quick summary along with action items:
+
+Action Items:
+1. Rahul - Prepare the first draft of the requirements document by Wednesday.
+2. Priya - Review customer feedback and share key observations.
+3. Arjun - Create a timeline proposal for the upcoming release.
+4. All Team Members - Update task statuses in the project tracker before Friday.
+
+Additional Notes:
+- Performance improvements will be prioritized in the next sprint.
+- Weekly check-ins will continue every Monday at 10:00 AM.
+- Please communicate any blockers as soon as they arise.
+
+Let me know if anything has been missed.
+
+Thanks,
+
+Karan

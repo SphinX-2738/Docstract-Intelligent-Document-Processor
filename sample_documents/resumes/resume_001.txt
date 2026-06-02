@@ -1,0 +1,48 @@
+Rohan Sharma
+
+Email: rohan.sharma92@example.com
+Phone: +91 98765 43210
+Location: Jaipur, Rajasthan
+
+Career Objective:
+Seeking an entry-level software development position where I can apply my technical knowledge, learn from experienced professionals, and contribute to meaningful projects.
+
+Education:
+B.Tech in Computer Science
+XYZ Institute of Technology
+2021 - 2025
+CGPA: 8.2/10
+
+Technical Skills:
+Java
+Python
+HTML
+CSS
+JavaScript
+SQL
+Git
+
+Projects:
+Online Library Management System
+Developed a web application to manage book inventory, student records, and issue tracking.
+
+Weather Dashboard
+Created a dashboard that fetches weather information from public APIs and displays forecasts.
+
+Internship:
+ABC Tech Solutions
+Software Intern
+June 2024 - August 2024
+
+Assisted in software testing and documentation.
+Reported and tracked application defects.
+
+Achievements:
+Completed certifications in Python Programming and Cloud Fundamentals.
+Participated in coding competitions and hackathons.
+
+Languages:
+English
+Hindi
+
+References available upon request.

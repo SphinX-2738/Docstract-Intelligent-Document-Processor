@@ -1,0 +1,63 @@
+Neha Verma
+
+Email: neha.verma@example.com
+Phone: +91 98111 22334
+Location: Bengaluru, Karnataka
+
+Professional Summary:
+Technology professional with over 8 years of experience in software engineering, system design, cloud platforms, and team leadership.
+
+Experience:
+
+Senior Software Engineer
+Global Digital Systems Pvt Ltd
+2021 - Present
+
+Leading development of customer-facing enterprise applications.
+Managing a team of developers and coordinating project delivery.
+Designed scalable microservices architecture.
+Implemented CI/CD pipelines and cloud deployment strategies.
+
+Software Engineer
+TechSphere Solutions
+2018 - 2021
+
+Developed backend services using Java and Spring Boot.
+Optimized database performance and API response times.
+Participated in architecture reviews and code quality initiatives.
+
+Associate Software Engineer
+Innovate Systems
+2016 - 2018
+
+Maintained enterprise applications.
+Provided production support and issue resolution.
+Developed internal reporting tools.
+
+Education:
+Bachelor of Engineering in Information Technology
+University of Pune
+2012 - 2016
+
+Skills:
+Java
+Spring Boot
+AWS
+Docker
+Kubernetes
+REST APIs
+SQL
+System Design
+Agile Development
+
+Achievements:
+Employee Excellence Award 2023.
+Led migration of legacy applications to cloud infrastructure.
+Mentored junior engineers and interns.
+
+Languages:
+English
+Hindi
+Kannada
+
+References available upon request.
