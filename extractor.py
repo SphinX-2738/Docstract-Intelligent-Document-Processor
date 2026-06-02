@@ -7,7 +7,7 @@ What this does:
     - Takes raw unstructured text as input
     - Takes a Pydantic schema as input
     - If document is large: uses ChromaDB semantic search first
-    - If document is small: sends directly to LLM
+    - If document is small: sends directly to LLM (faster, no memory cost)
     - Returns (validated Pydantic object, token_usage dict) tuple
     - Token usage enables real cost tracking in batch_processor.py
 """
@@ -32,8 +32,11 @@ MODEL       = "llama-3.3-70b-versatile"
 TEMPERATURE = 0
 MAX_TOKENS  = 1000
 
-# If document exceeds this word count, use semantic search
-SEMANTIC_SEARCH_THRESHOLD = 500
+# If document exceeds this word count, use semantic search.
+# 1000 words ≈ 6000 characters — handles invoices, resumes,
+# and emails in full without loading the embedding model.
+# Semantic search only kicks in for genuinely large documents.
+SEMANTIC_SEARCH_THRESHOLD = 1000
 
 
 # ─────────────────────────────────────────────
@@ -100,23 +103,24 @@ def extract_with_semantic_search(
     """
     Use ChromaDB semantic search to find relevant chunks,
     then combine them into a focused context for the LLM.
+    Only called for documents over SEMANTIC_SEARCH_THRESHOLD words.
     """
     from chunker import chunk_document
     from embedder import embed_document
-    from semantic_search import search_document
+    from semantic_search import search_chunks
 
     print(f"   Chunking document...")
     chunks = chunk_document(raw_text, doc_id)
     print(f"   Found {len(chunks)} chunk(s)")
 
     print(f"   Embedding chunks...")
-    embed_document(chunks, doc_id)
+    embed_document(raw_text, doc_id)
 
     queries = get_search_queries(schema)
 
     all_relevant_text = set()
     for query in queries:
-        results = search_document(query, doc_id, n_results=2)
+        results = search_chunks(query, filename=doc_id, top_k=2)
         for result in results:
             all_relevant_text.add(result["text"])
 
@@ -145,7 +149,10 @@ def extract(
     Extract structured data from unstructured text using LLM.
 
     Automatically decides whether to use semantic search based
-    on document length (threshold: 500 words).
+    on document length (threshold: 1000 words / ~6000 chars).
+
+    Documents under 1000 words go straight to Groq — no embeddings
+    loaded, no ChromaDB, minimal memory usage.
 
     Returns:
         tuple: (validated Pydantic object or None, token_usage dict)
@@ -173,7 +180,7 @@ def extract(
         print(f"   Document: {word_count} words - using semantic search")
         context = extract_with_semantic_search(raw_text, schema, doc_id)
     else:
-        print(f"   Document: {word_count} words - sending full text")
+        print(f"   Document: {word_count} words - sending full text (under threshold)")
         context = raw_text
 
     # ── Build schema description for prompt ──────────────────────────

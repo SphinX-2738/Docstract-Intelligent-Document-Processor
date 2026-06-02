@@ -49,19 +49,33 @@ TOP_K_RESULTS   = 3                     # How many chunks to retrieve
 
 
 # ─────────────────────────────────────────────
-# SETUP: Load model and connect to ChromaDB
+# SETUP: Lazy-loaded model and ChromaDB client
+# Model only loads when first needed — not on import.
+# This keeps startup memory under 512MB on Render free tier.
 # ─────────────────────────────────────────────
 
-print("Loading semantic search components...")
-embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+_embedding_model = None
+_collection      = None
 
-chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-collection    = chroma_client.get_or_create_collection(
-    name=COLLECTION_NAME,
-    metadata={"hnsw:space": "cosine"}
-)
 
-print(f"✅ Semantic search ready | {collection.count()} chunks in DB")
+def _get_model() -> SentenceTransformer:
+    """Load embedding model on first use, reuse after."""
+    global _embedding_model
+    if _embedding_model is None:
+        _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+    return _embedding_model
+
+
+def _get_collection():
+    """Connect to ChromaDB on first use, reuse after."""
+    global _collection
+    if _collection is None:
+        client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+        _collection = client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"}
+        )
+    return _collection
 
 
 # ─────────────────────────────────────────────
@@ -130,12 +144,14 @@ def search_chunks(
             }
     """
 
-    if collection.count() == 0:
+    col = _get_collection()
+
+    if col.count() == 0:
         print("   ⚠️  ChromaDB is empty. Run embedder.py first.")
         return []
 
     # ── Convert query to vector ───────────────────────────────────────
-    query_embedding = embedding_model.encode(
+    query_embedding = _get_model().encode(
         query,
         convert_to_numpy=True
     ).tolist()
@@ -145,9 +161,9 @@ def search_chunks(
 
     # ── Query ChromaDB ────────────────────────────────────────────────
     try:
-        results = collection.query(
+        results = col.query(
             query_embeddings=[query_embedding],
-            n_results=min(top_k, collection.count()),
+            n_results=min(top_k, col.count()),
             where=where_filter,
             include=["documents", "metadatas", "distances"]
         )
@@ -284,23 +300,6 @@ if __name__ == "__main__":
     print(f"  Context length: {len(context.split())} words")
     print(f"  Preview:\n  {context[:300]}...")
 
-    # ── Test 4: Show relevance scores for all doc types ───────────────
-    print("\n\n📋 TEST 4: Relevance scores across document types")
-    print("─" * 50)
-
-    test_queries = [
-        ("invoice total amount", "invoices"),
-        ("candidate work experience", "resumes"),
-        ("email action items", "emails")
-    ]
-
-    for query, doc_type in test_queries:
-        print(f"\n  Query: '{query}'")
-        results = search_chunks(query, top_k=2)
-        for r in results[:2]:
-            print(f"    {r['filename']:<25} score: {r['score']:.4f}")
-
     print("\n" + "=" * 60)
     print("✅ Semantic search working correctly")
-    print("   Next: wire this into extractor.py")
     print("=" * 60)

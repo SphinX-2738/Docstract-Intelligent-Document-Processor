@@ -60,26 +60,39 @@ COLLECTION_NAME = "docstract_chunks"
 
 
 # ─────────────────────────────────────────────
-# SETUP: Load model and ChromaDB client
+# SETUP: Lazy-loaded model and ChromaDB client
+# Model only loads when first needed — not on import.
+# This keeps startup memory under 512MB on Render free tier.
 # ─────────────────────────────────────────────
 
-print("Loading embedding model...")
-embedding_model = SentenceTransformer(EMBEDDING_MODEL)
-print(f"✅ Model loaded: {EMBEDDING_MODEL}")
+_embedding_model = None
+_chroma_client   = None
+_collection      = None
 
-# Persistent ChromaDB client — data survives between runs
-chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
 
-# Get or create the collection
-collection = chroma_client.get_or_create_collection(
-    name=COLLECTION_NAME,
-    metadata={"hnsw:space": "cosine"}
-    # cosine similarity: measures angle between vectors
-    # better than euclidean distance for text similarity
-)
+def _get_model() -> SentenceTransformer:
+    """Load embedding model on first use, reuse after."""
+    global _embedding_model
+    if _embedding_model is None:
+        print("Loading embedding model (first use)...")
+        _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+        print(f"✅ Model loaded: {EMBEDDING_MODEL}")
+    return _embedding_model
 
-print(f"✅ ChromaDB collection ready: {COLLECTION_NAME}")
-print(f"   Current documents in DB: {collection.count()}")
+
+def _get_collection():
+    """Connect to ChromaDB on first use, reuse after."""
+    global _chroma_client, _collection
+    if _collection is None:
+        _chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
+        _collection = _chroma_client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"}
+            # cosine similarity: measures angle between vectors
+            # better than euclidean distance for text similarity
+        )
+        print(f"✅ ChromaDB collection ready: {COLLECTION_NAME}")
+    return _collection
 
 
 # ─────────────────────────────────────────────
@@ -122,11 +135,13 @@ def embed_document(raw_text: str, filename: str) -> dict:
 
     print(f"   Chunks generated: {len(chunks)}")
 
+    col = _get_collection()
+
     # ── Step 2: Delete old entries for this file (clean re-run) ───────
     try:
-        existing = collection.get(where={"filename": filename})
+        existing = col.get(where={"filename": filename})
         if existing["ids"]:
-            collection.delete(where={"filename": filename})
+            col.delete(where={"filename": filename})
             print(f"   Deleted {len(existing['ids'])} old chunk(s)")
     except Exception:
         pass   # No existing entries — that's fine
@@ -136,7 +151,7 @@ def embed_document(raw_text: str, filename: str) -> dict:
     texts = [chunk["text"] for chunk in chunks]
 
     print(f"   Generating embeddings...")
-    embeddings = embedding_model.encode(
+    embeddings = _get_model().encode(
         texts,
         show_progress_bar=False,
         convert_to_numpy=True
@@ -145,7 +160,7 @@ def embed_document(raw_text: str, filename: str) -> dict:
           f"(each {len(embeddings[0])} dimensions)")
 
     # ── Step 4: Store in ChromaDB ─────────────────────────────────────
-    collection.add(
+    col.add(
         ids        = [chunk["chunk_id"] for chunk in chunks],
         embeddings = embeddings.tolist(),
         documents  = texts,
@@ -161,7 +176,7 @@ def embed_document(raw_text: str, filename: str) -> dict:
     )
 
     print(f"   ✅ Stored in ChromaDB")
-    print(f"   Total docs in DB now: {collection.count()}")
+    print(f"   Total docs in DB now: {col.count()}")
 
     return {
         "filename":     filename,
@@ -237,6 +252,6 @@ if __name__ == "__main__":
     print(f"Total chunks stored: {total_chunks}")
     print(f"ChromaDB location  : {CHROMA_DB_PATH}/")
     print(f"Collection name    : {COLLECTION_NAME}")
-    print(f"Total in DB        : {collection.count()}")
+    print(f"Total in DB        : {_get_collection().count()}")
     print("=" * 60)
     print("\n✅ Vector store ready. Run semantic_search.py next.")
