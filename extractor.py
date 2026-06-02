@@ -36,7 +36,7 @@ MAX_TOKENS  = 1000
 # 1000 words ≈ 6000 characters — handles invoices, resumes,
 # and emails in full without loading the embedding model.
 # Semantic search only kicks in for genuinely large documents.
-SEMANTIC_SEARCH_THRESHOLD = 1000
+SEMANTIC_SEARCH_THRESHOLD = 2000
 
 
 # ─────────────────────────────────────────────
