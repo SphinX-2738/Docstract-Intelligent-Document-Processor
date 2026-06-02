@@ -244,16 +244,6 @@ Tested on 7 documents across 3 categories:
 
 ---
 
-## 🤝 About
-
-**Docstract** is Project 2 of 3 in my Generative AI Engineering portfolio.
-
-- ✅ **Project 1** — [LLM Evaluator Suite](https://github.com/SphinX-2738/LLM-Evaluator_Suite)
-- ✅ **Project 2** — Docstract — Intelligent Document Processor *(this repo)*
-- ⏳ **Project 3** — Multi-Stage Content Pipeline *(coming soon)*
-
----
-
 **Ankur Sharma**
 - GitHub: [@SphinX-2738](https://github.com/SphinX-2738)
 - LinkedIn: [Ankur Sharma](https://www.linkedin.com/in/ankur-sharma-37a0a3276/)
