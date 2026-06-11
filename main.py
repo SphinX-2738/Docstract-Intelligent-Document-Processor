@@ -21,12 +21,18 @@ Endpoints:
 
 import os
 import json
+import asyncio
 from datetime import datetime
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from config import (
     PROVIDER_PRICING,
@@ -46,8 +52,42 @@ from schemas.email import Email
 # APP INITIALIZATION
 # ─────────────────────────────────────────────
 
+# ─────────────────────────────────────────────
+# KEEP-ALIVE: Self-ping every 14 minutes
+# Prevents Render free tier cold starts
+# ─────────────────────────────────────────────
+
+APP_URL = os.getenv("APP_URL", "")
+
+async def self_ping():
+    """Ping /health every 14 minutes to keep Render warm."""
+    if not APP_URL or not httpx:
+        return
+    await asyncio.sleep(60)  # wait 1 min after startup before first ping
+    while True:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.get(f"{APP_URL}/health")
+        except Exception:
+            pass  # silently ignore — UptimeRobot is the primary keep-alive
+        await asyncio.sleep(14 * 60)  # 14 minutes
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start background keep-alive task on startup."""
+    task = asyncio.create_task(self_ping())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
 app = FastAPI(
     title="Docstract - Intelligent Document Processor",
+    lifespan=lifespan,
     description="""
     Extract structured data from unstructured documents using LLMs.
 
