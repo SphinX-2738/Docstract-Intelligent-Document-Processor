@@ -16,23 +16,16 @@ Endpoints:
     POST /extract/file     → Extract from uploaded .txt file
     GET  /results          → Get all past extraction results
     GET  /results/{doc_id} → Get single extraction result
-    GET  /                 → Serve frontend
 """
 
 import os
 import json
-import asyncio
 from datetime import datetime
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
-try:
-    import httpx
-except ImportError:
-    httpx = None
+from fastapi.responses import FileResponse
 
 from config import (
     PROVIDER_PRICING,
@@ -52,42 +45,8 @@ from schemas.email import Email
 # APP INITIALIZATION
 # ─────────────────────────────────────────────
 
-# ─────────────────────────────────────────────
-# KEEP-ALIVE: Self-ping every 14 minutes
-# Prevents Render free tier cold starts
-# ─────────────────────────────────────────────
-
-APP_URL = os.getenv("APP_URL", "")
-
-async def self_ping():
-    """Ping /health every 14 minutes to keep Render warm."""
-    if not APP_URL or not httpx:
-        return
-    await asyncio.sleep(60)  # wait 1 min after startup before first ping
-    while True:
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                await client.get(f"{APP_URL}/health")
-        except Exception:
-            pass  # silently ignore — UptimeRobot is the primary keep-alive
-        await asyncio.sleep(14 * 60)  # 14 minutes
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Start background keep-alive task on startup."""
-    task = asyncio.create_task(self_ping())
-    yield
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
-
-
 app = FastAPI(
     title="Docstract - Intelligent Document Processor",
-    lifespan=lifespan,
     description="""
     Extract structured data from unstructured documents using LLMs.
 
@@ -102,9 +61,11 @@ app = FastAPI(
 )
 
 # ── CORS Middleware ───────────────────────────────────────────────────
+# Allows your React frontend to call this API.
+# Without this, browsers block cross-origin requests.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],       # In production: specify your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -113,6 +74,7 @@ app.add_middleware(
 
 # ─────────────────────────────────────────────
 # SCHEMA REGISTRY
+# Maps document type string → Pydantic schema class
 # ─────────────────────────────────────────────
 
 SCHEMA_REGISTRY = {
@@ -129,7 +91,7 @@ SCHEMA_REGISTRY = {
 class ExtractRequest(BaseModel):
     """Request body for text-based extraction."""
     document: str
-    doc_type: str
+    doc_type: str            # "invoice", "resume", or "email"
     doc_id:   Optional[str] = None
 
 
@@ -153,8 +115,22 @@ class ExtractionResult(BaseModel):
 # ─────────────────────────────────────────────
 
 def run_pipeline(raw_text: str, doc_type: str, doc_id: str) -> dict:
-    """Run the full extraction pipeline on a document."""
+    """
+    Run the full extraction pipeline on a document.
 
+    Flow:
+        raw text → extract → validate → confidence score → return
+
+    Args:
+        raw_text (str): Document content
+        doc_type (str): "invoice", "resume", or "email"
+        doc_id   (str): Unique identifier for this document
+
+    Returns:
+        dict: Full pipeline result
+    """
+
+    # ── Validate doc_type ─────────────────────────────────────────────
     if doc_type not in SCHEMA_REGISTRY:
         return {
             "success":   False,
@@ -182,6 +158,7 @@ def run_pipeline(raw_text: str, doc_type: str, doc_id: str) -> dict:
     }
 
     # ── Step 1: Extract ───────────────────────────────────────────────
+    # extractor.py always returns a tuple (data, token_usage)
     extracted, token_usage = extract(raw_text, schema, doc_id=doc_id)
 
     result["token_usage"] = token_usage
@@ -209,25 +186,17 @@ def run_pipeline(raw_text: str, doc_type: str, doc_id: str) -> dict:
 
 
 # ─────────────────────────────────────────────
-# ENDPOINT 0: Serve Frontend
-# ─────────────────────────────────────────────
-
-@app.get("/", tags=["System"], include_in_schema=False)
-def serve_frontend():
-    """Serve the Docstract frontend HTML file."""
-    html_file = "Docstract-Intelligent Document Processor.html"
-    if os.path.exists(html_file):
-        return FileResponse(html_file, media_type="text/html")
-    raise HTTPException(status_code=404, detail="Frontend not found")
-
-
-# ─────────────────────────────────────────────
 # ENDPOINT 1: Health Check
 # ─────────────────────────────────────────────
 
 @app.get("/health", tags=["System"])
 def health_check():
-    """Check if the API is running."""
+    """
+    Check if the API is running.
+
+    Returns basic info about the active provider and model.
+    Use this to verify the API is up before sending documents.
+    """
     provider = get_active_provider()
     return {
         "status":    "healthy",
@@ -245,7 +214,12 @@ def health_check():
 
 @app.get("/providers", tags=["System"])
 def list_providers():
-    """List all available LLM providers and their pricing."""
+    """
+    List all available LLM providers and their pricing.
+
+    Shows the active provider and cost comparison across all providers.
+    Use this to decide which provider to use for your use case.
+    """
     providers = []
     for key, info in PROVIDER_PRICING.items():
         providers.append({
@@ -367,7 +341,12 @@ async def extract_from_file(
 
 @app.get("/results", tags=["Results"])
 def get_all_results():
-    """Get all past extraction results from the outputs folder."""
+    """
+    Get all past extraction results from the outputs folder.
+
+    Returns a summary of all documents processed so far,
+    including validation status, confidence scores, and costs.
+    """
     extracted_dir = "outputs/extracted"
 
     if not os.path.exists(extracted_dir):
@@ -419,7 +398,12 @@ def get_all_results():
 
 @app.get("/results/{doc_id}", tags=["Results"])
 def get_single_result(doc_id: str):
-    """Get the full extraction result for a specific document."""
+    """
+    Get the full extraction result for a specific document.
+
+    Returns everything: extracted fields, validation checks,
+    confidence scores per field, token usage, and cost.
+    """
     extracted_dir = "outputs/extracted"
     filepath      = os.path.join(extracted_dir, f"{doc_id}_extracted.json")
 
@@ -454,5 +438,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True
+        reload=True    # Auto-restarts when you save changes
     )

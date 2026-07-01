@@ -32,7 +32,7 @@
 
 Most document processing tools just dump raw text. Docstract goes further:
 
-1. **Extracts** — Sends raw text to LLaMA 3.3 70B via Groq API with schema-aware prompts
+1. **Extracts** — Sends raw text to Qwen 3.6 27B via Groq API with schema-aware prompts
 2. **Validates** — Runs business logic checks (math verification, GSTIN format, required fields)
 3. **Scores** — Assigns per-field confidence scores (0–100%) and flags anything below 70% for human review
 4. **Reports** — Generates structured JSON, batch CSV reports, and a full terminal report
@@ -200,7 +200,7 @@ Docstract runs on **Groq's free tier** — $0.00 per extraction. The Token Intel
 
 | Provider | Cost / 1K docs |
 |----------|---------------|
-| Groq (LLaMA 3.3 70B) | $0.00 (free) |
+| Groq (Qwen 3.6 27B) | $0.00 (free) |
 | OpenAI GPT-4o Mini | ~$0.15 |
 | Anthropic Claude Haiku | ~$0.80 |
 | Google Gemini Flash | ~$0.075 |
@@ -223,7 +223,7 @@ Docstract runs on **Groq's free tier** — $0.00 per extraction. The Token Intel
 
 | Layer | Technology |
 |-------|-----------|
-| LLM | LLaMA 3.3 70B via Groq API |
+| LLM | Qwen 3.6 27B via Groq API |
 | Backend | FastAPI + Python |
 | Validation | Pydantic v2 |
 | Vector DB | ChromaDB |

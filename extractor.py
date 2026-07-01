@@ -28,7 +28,7 @@ load_dotenv()
 # ─────────────────────────────────────────────
 
 client      = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL       = "llama-3.3-70b-versatile"
+MODEL       = "qwen/qwen3.6-27b"
 TEMPERATURE = 0
 MAX_TOKENS  = 1000
 
@@ -224,10 +224,13 @@ Return ONLY the JSON object. Nothing else."""
                 {"role": "user",   "content": user_prompt}
             ],
             temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS
+            max_tokens=MAX_TOKENS,
+            reasoning_format="hidden"   # hides <think> blocks (Qwen 3.6 27B)
         )
 
-        raw_output = response.choices[0].message.content
+        raw_output = response.choices[0].message.content or ""
+        # Safety net: strip any leftover <think>...</think> blocks
+        raw_output = re.sub(r'<think>.*?</think>', '', raw_output, flags=re.DOTALL).strip()
 
         # ── Capture real token usage ──────────────────────────────────
         token_usage = {

@@ -18,7 +18,7 @@ HOW TO SWITCH PROVIDERS:
     That's it. Nothing else needs to change.
 
 SUPPORTED PROVIDERS:
-    "groq"               → Llama 3.3 70B (free)
+    "groq"               → qwen3.6-27b (free)
     "openai_gpt4o_mini"  → GPT-4o Mini
     "openai_gpt4o"       → GPT-4o
     "anthropic_haiku"    → Claude 3.5 Haiku
@@ -36,7 +36,7 @@ SUPPORTED PROVIDERS:
 # ═══════════════════════════════════════════════════════════
 
 ACTIVE_PROVIDER = "groq"
-MODEL           = "llama-3.3-70b-versatile"
+MODEL           = "qwen/qwen3.6-27b"
 
 # ═══════════════════════════════════════════════════════════
 # Everything below this line never needs to change
@@ -65,8 +65,8 @@ MAX_TOKENS  = 1000   # Max response length per extraction
 
 PROVIDER_PRICING = {
     "groq": {
-        "name":   "Groq (Llama 3.3 70B)",
-        "model":  "llama-3.3-70b-versatile",
+        "name":   "Groq (qwen3.6-27b)",
+        "model":  "qwen/qwen3.6-27b",
         "input":  0.0,
         "output": 0.0,
         "free":   True
