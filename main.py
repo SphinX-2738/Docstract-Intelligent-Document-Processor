@@ -80,7 +80,7 @@ app.add_middleware(
 @app.get("/", include_in_schema=False)
 def serve_frontend():
     """Serve the Docstract frontend HTML."""
-    return FileResponse("docstract.html")
+    return FileResponse("Docstract-Intelligent_Document_Processor.html")
 
 
 # ─────────────────────────────────────────────
