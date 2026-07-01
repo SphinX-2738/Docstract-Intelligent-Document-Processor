@@ -23,9 +23,10 @@ import json
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
-from fastapi.responses import FileResponse
 
 from config import (
     PROVIDER_PRICING,
@@ -70,6 +71,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ─────────────────────────────────────────────
+# ROOT ROUTE — serves the frontend
+# ─────────────────────────────────────────────
+
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    """Serve the Docstract frontend HTML."""
+    return FileResponse("docstract.html")
 
 
 # ─────────────────────────────────────────────
