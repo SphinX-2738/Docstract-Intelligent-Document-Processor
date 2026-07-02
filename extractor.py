@@ -30,7 +30,7 @@ load_dotenv()
 client      = Groq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL       = "qwen/qwen3.6-27b"
 TEMPERATURE = 0
-MAX_TOKENS  = 8192
+MAX_TOKENS  = 4096
 
 # If document exceeds this word count, use semantic search.
 # 1000 words ≈ 6000 characters — handles invoices, resumes,
