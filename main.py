@@ -27,6 +27,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
+import asyncio
+import httpx
 
 from config import (
     PROVIDER_PRICING,
@@ -46,6 +48,27 @@ from schemas.email import Email
 # APP INITIALIZATION
 # ─────────────────────────────────────────────
 
+from contextlib import asynccontextmanager
+
+APP_URL = os.getenv("APP_URL", "")
+
+async def self_ping():
+    """Ping /health every 14 minutes to prevent Render inactivity sleep."""
+    await asyncio.sleep(60)
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                if APP_URL:
+                    await client.get(f"{APP_URL}/health", timeout=10)
+            except Exception:
+                pass
+            await asyncio.sleep(14 * 60)
+
+@asynccontextmanager
+async def lifespan(app):
+    asyncio.create_task(self_ping())
+    yield
+
 app = FastAPI(
     title="Docstract - Intelligent Document Processor",
     description="""
@@ -58,7 +81,8 @@ app = FastAPI(
 
     Built by Ankur Sharma | Gen AI Engineer
     """,
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # ── CORS Middleware ───────────────────────────────────────────────────
